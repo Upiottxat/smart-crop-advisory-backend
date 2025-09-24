@@ -9,6 +9,7 @@ const bodyParser = require('body-parser');
 const authRoutes = require('./routes/auth');
 const farmRoutes = require('./routes/farm');
 const soilRoutes = require('./routes/soil');
+const krishimitraRouter = require('./krishimitra');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -21,6 +22,8 @@ app.use(morgan('dev'));
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/farms', farmRoutes);
 app.use('/api/v1/soil', soilRoutes);
+
+app.use('/api/krishimitra', krishimitraRouter);
 
 app.get('/', (req, res) => res.json({ ok: true, name: 'smart-crop-advisory-backend' }));
 
