@@ -36,11 +36,11 @@ Instructions:
 8.  Provide quantities in metric and common field measures (e.g., "1 चम्मच प्रति लीटर").
 9.  End with a motivational or friendly closing line.
 
-**Important:** Always output in Markdown only. Do not output plain text.
+**Important:** Always output in Markdown only. Do not output plain text. use more Emojis in your every response
 `;
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 function fileToGenerativePart(path, mimeType) {
   return {
@@ -51,10 +51,34 @@ function fileToGenerativePart(path, mimeType) {
   };
 }
 
+// A simple helper function for retrying
+const retryWithBackoff = async (fn, retries = 3, delay = 1000) => {
+  let lastError;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn(); // Attempt the function
+    } catch (error) {
+      lastError = error;
+      // Only retry on 503 errors
+      if (error.message.includes('[503 Service Unavailable]')) {
+        console.log(`Attempt ${i + 1} failed with 503. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponentially increase delay
+      } else {
+        // If it's a different error, don't retry
+        throw error;
+      }
+    }
+  }
+  // If all retries fail, throw the last captured error
+  throw lastError;
+};
+
 router.post('/chat', upload.single('image'), async (req, res) => {
+  const imageFile = req.file;
   try {
     const { message, language } = req.body;
-    const imageFile = req.file;
+    
 
     const userQuery = imageFile 
       ? (message?.trim() ? `User's query about the image: "${message}"` : "Analyze this crop photo and provide a report.")
@@ -62,7 +86,7 @@ router.post('/chat', upload.single('image'), async (req, res) => {
 
     const promptParts = [
       { text: KRISHIMITRA_PROMPT },
-      { text: language }, // The language instruction from the app
+      { text: `Language: ${language}` },
       { text: userQuery },
     ];
 
@@ -71,8 +95,11 @@ router.post('/chat', upload.single('image'), async (req, res) => {
       promptParts.push(imagePart);
     }
 
-    const result = await model.generateContentStream({
-      contents: [{ role: "user", parts: promptParts }],
+    // Wrap the API call in our retry function
+    const result = await retryWithBackoff(async () => {
+      return model.generateContentStream({
+        contents: [{ role: "user", parts: promptParts }],
+      });
     });
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -82,12 +109,14 @@ router.post('/chat', upload.single('image'), async (req, res) => {
     }
     res.end();
 
+  } catch (error) {
+    console.error("Error in /api/krishimitra/chat:", error);
+    res.status(500).send('Error processing your request. The service might be temporarily unavailable.');
+  } finally {
+    // IMPORTANT: Clean up the file even if an error occurs
     if (imageFile) {
       fs.unlinkSync(imageFile.path);
     }
-  } catch (error) {
-    console.error("Error in /api/krishimitra/chat:", error);
-    res.status(500).send('Error processing your request.');
   }
 });
 

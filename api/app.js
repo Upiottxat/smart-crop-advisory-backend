@@ -28,8 +28,8 @@ app.use('/api/krishimitra', krishimitraRouter);
 app.get('/', (req, res) => res.json({ ok: true, name: 'smart-crop-advisory-backend' }));
 
 async function start(){
-  await mongoose.connect(process.env.MONGO_URI, { });
-  console.log('Mongo connected');
+  // await mongoose.connect(process.env.MONGO_URI, { });
+  // console.log('Mongo connected');
   app.listen(PORT, ()=> console.log('Server running on', PORT));
 }
 

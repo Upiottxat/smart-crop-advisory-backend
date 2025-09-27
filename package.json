@@ -2,7 +2,7 @@
   "name": "smart-crop-advisory-backend",
   "version": "1.0.0",
   "description": "Backend for Smart Crop Advisory System with KrishiMitra AI integration.",
-  "main": "src/app.js",
+  "main": "api/app.js",
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
